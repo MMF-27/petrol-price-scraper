@@ -38,6 +38,7 @@ jobs:
       - name: Install R packages
         run: |
           Rscript -e '
+            cat("Using repos:", getOption("repos"), "\n")
             install.packages(c("png", "tesseract", "tidyr", "dplyr", "lubridate"))
             library(png)
             library(tesseract)
