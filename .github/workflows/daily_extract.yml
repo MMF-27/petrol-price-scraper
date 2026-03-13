@@ -1,13 +1,9 @@
-
 name: Daily Petrol Price Extraction
 
 on:
   schedule:
     - cron: '0 23 * * *'
   workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   extract:
@@ -37,7 +33,11 @@ jobs:
             libfreetype6-dev \
             libtiff5-dev \
             libjpeg-dev \
+            libpoppler-cpp-dev \
             pkg-config
+          echo "--- Verify tesseract is installed ---"
+          tesseract --version
+          pkg-config --modversion tesseract
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -46,7 +46,17 @@ jobs:
 
       - name: Install R packages
         run: |
-          Rscript -e 'install.packages(c("png", "tesseract", "tidyr", "dplyr", "lubridate"), repos="https://cloud.r-project.org")'
+          Rscript -e '
+            options(warn = 2)
+            install.packages(c("png", "tidyr", "dplyr", "lubridate"), repos="https://cloud.r-project.org")
+            install.packages("tesseract", repos="https://cloud.r-project.org", type="source")
+            library(png)
+            library(tesseract)
+            library(tidyr)
+            library(dplyr)
+            library(lubridate)
+            cat("All packages loaded successfully\n")
+          '
 
       - name: Run extraction
         run: Rscript scripts/extract_petrol_data.R
