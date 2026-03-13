@@ -30,16 +30,19 @@ jobs:
             tesseract-ocr-eng \
             libtesseract-dev \
             libleptonica-dev \
+            libpoppler-cpp-dev \
             libpng-dev \
             libjpeg-dev \
             libcurl4-openssl-dev
+          # Verify critical headers exist
+          dpkg -l | grep -E 'libjpeg-dev|libpoppler-cpp-dev|libtesseract-dev'
 
       - name: Install R packages
         run: |
           Rscript -e '
             install.packages(
-              c("png", "tesseract", "tidyr", "dplyr", "lubridate"),
-              repos = "https://packagemanager.posit.co/cran/__linux__/noble/latest",
+              c("qpdf", "pdftools", "tesseract", "png", "tidyr", "dplyr", "lubridate"),
+              repos = "https://cloud.r-project.org",
               Ncpus = 2
             )
             # Verify all packages load
