@@ -21,21 +21,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libpng-dev \
+            libjpeg-dev \
             tesseract-ocr \
             tesseract-ocr-eng \
             libtesseract-dev \
             libleptonica-dev \
+            libpoppler-cpp-dev \
+            libqpdf-dev \
             libcurl4-openssl-dev \
             libxml2-dev \
             libfontconfig1-dev \
             libharfbuzz-dev \
             libfribidi-dev \
             libfreetype6-dev \
-            libtiff5-dev \
-            libjpeg-dev \
-            libpoppler-cpp-dev \
+            libtiff-dev \
             pkg-config
-          echo "--- Verify tesseract is installed ---"
+          echo "--- Verify key headers exist ---"
+          dpkg -L libjpeg-dev | grep jpeglib || echo "jpeglib.h not in libjpeg-dev, checking turbo..."
+          find /usr/include -name "jpeglib.h" 2>/dev/null
           tesseract --version
           pkg-config --modversion tesseract
 
@@ -48,8 +51,7 @@ jobs:
         run: |
           Rscript -e '
             options(warn = 2)
-            install.packages(c("png", "tidyr", "dplyr", "lubridate"), repos="https://cloud.r-project.org")
-            install.packages("tesseract", repos="https://cloud.r-project.org", type="source")
+            install.packages(c("png", "tesseract", "tidyr", "dplyr", "lubridate"), repos="https://cloud.r-project.org")
             library(png)
             library(tesseract)
             library(tidyr)
