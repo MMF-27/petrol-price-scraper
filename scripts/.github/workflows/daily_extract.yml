@@ -1,0 +1,60 @@
+name: Daily Petrol Price Extraction
+
+# Run daily at 9am AEST 
+# Also allow manual triggering from the Actions tab
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    
+    # Give the job permission to push commits back to the repo
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Check out the repo so we have access to our script and data/
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Install R
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.2'
+
+      # 3. Install system dependencies needed by R packages
+      #    - libpng: for the png package
+      #    - tesseract + eng data: for OCR
+      #    - libcurl: for downloading images
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libpng-dev \
+            tesseract-ocr \
+            tesseract-ocr-eng \
+            libtesseract-dev \
+            libleptonica-dev \
+            libcurl4-openssl-dev
+
+      # 4. Install required R packages
+      - name: Install R packages
+        run: |
+          Rscript -e 'install.packages(c("png", "tesseract", "tidyr", "dplyr", "lubridate"), repos="https://cloud.r-project.org")'
+
+      # 5. Run the extraction script
+      - name: Run extraction
+        run: Rscript scripts/extract_petrol_data.R
+
+      # 6. Commit and push the updated CSV back to the repo
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/petrol_prices.csv
+          git diff --staged --quiet || git commit -m "Update petrol prices $(date +%Y-%m-%d)"
+          git push
