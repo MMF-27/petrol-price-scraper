@@ -270,8 +270,9 @@ if (!dir.exists("data")) dir.create("data", recursive = TRUE)
 
 if (file.exists(output_file)) {
   # Read existing data, append new rows, remove duplicates
-  existing <- read.csv(output_file, stringsAsFactors = FALSE)
-  existing$date <- as.Date(existing$date)
+existing <- read.csv(output_file, stringsAsFactors = FALSE)
+existing$date <- as.Date(existing$date)
+existing$forecast_date <- as.Date(existing$forecast_date)
   
 combined <- bind_rows(existing, all_wide) %>%
   group_by(date) %>%
