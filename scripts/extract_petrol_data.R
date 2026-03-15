@@ -275,7 +275,7 @@ existing$date <- as.Date(existing$date)
 existing$forecast_date <- as.Date(existing$forecast_date)
   
 combined <- bind_rows(existing, all_wide) %>%
-  group_by(date) %>%
+  group_by(forecast_date, date) %>%
   slice_tail(n = 1) %>%
   ungroup() %>%
   arrange(date)
