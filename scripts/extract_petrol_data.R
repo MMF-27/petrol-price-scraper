@@ -255,9 +255,9 @@ for (i in 1:nrow(cities)) {
 # -- Pivot wide and add dates --
 all_wide <- all_results %>%
   pivot_wider(names_from = city, values_from = value) %>%
-  mutate(forecast_date=today,
+  mutate(forecast_date = today,
          date = today - days(max(point) - point)) %>%
-  select(forecast_date,date, point, everything())
+  select(forecast_date, date, point, everything())
 
 cat("\nToday's extraction:\n")
 print(all_wide)
@@ -273,9 +273,11 @@ if (file.exists(output_file)) {
   existing <- read.csv(output_file, stringsAsFactors = FALSE)
   existing$date <- as.Date(existing$date)
   
-  combined <- bind_rows(existing, all_wide) %>%
-    distinct(date, .keep_all = TRUE) %>%     # deduplicate by date
-    arrange(date)
+combined <- bind_rows(existing, all_wide) %>%
+  group_by(date) %>%
+  slice_tail(n = 1) %>%
+  ungroup() %>%
+  arrange(date)
   
   write.csv(combined, output_file, row.names = FALSE)
   cat("\nAppended to", output_file, "- total rows:", nrow(combined), "\n")
