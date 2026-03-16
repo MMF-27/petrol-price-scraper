@@ -272,7 +272,7 @@ monthly_avg_fmt <- monthly_avg %>%
 ae_index <- monthly_avg$Actual_estimate
 last_A_row  <- max(which(ae_index == "A"))
 first_E_row <- min(which(ae_index == "E"))
-bold_rows   <- c(last_A_row, first_E_row
+bold_rows   <- c(last_A_row, first_E_row)
 
 # ── Build HTML ──
 html_out <- paste0(
