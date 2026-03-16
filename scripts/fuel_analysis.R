@@ -105,6 +105,27 @@ fuel.data <- fuel.data %>%
     Australia = as.numeric(as.matrix(select(., all_of(cities))) %*% cpi_weights)) %>%
   relocate(Australia, .after = Perth)
 
+# ── Daily data table: last actual month + first estimate month ──
+last_A_month <- fuel.data %>%
+  filter(Actual_estimate == "A") %>%
+  pull(date) %>%
+  max() %>%
+  floor_date("month")
+
+first_E_month <- fuel.data %>%
+  filter(Actual_estimate == "E") %>%
+  pull(date) %>%
+  min() %>%
+  floor_date("month")
+
+daily_detail <- fuel.data %>%
+  mutate(year_month = floor_date(date, "month")) %>%
+  filter(year_month %in% c(last_A_month, first_E_month)) %>%
+  select(date, Actual_estimate, all_of(cities), Australia) %>%
+  mutate(date = format(date, "%d-%b-%y"),
+         across(c(all_of(cities), "Australia"), ~ round(.x, 1)))
+
+
 # ─────────────────────────────────────────────
 # STEP 4: Monthly average (actuals only)
 # ─────────────────────────────────────────────
@@ -246,6 +267,13 @@ mom_growth_fmt <- mom_growth %>%
 monthly_avg_fmt <- monthly_avg %>%
   mutate(year_month = format(year_month, "%b-%y"))
 
+# ── Find which rows to bold ──
+# Last A row and first E row in monthly_avg
+ae_index <- monthly_avg$Actual_estimate
+last_A_row  <- max(which(ae_index == "A"))
+first_E_row <- min(which(ae_index == "E"))
+bold_rows   <- c(last_A_row, first_E_row
+
 # ── Build HTML ──
 html_out <- paste0(
   '<!DOCTYPE html>
@@ -263,25 +291,35 @@ html_out <- paste0(
 <body>
 <h2>Fuel Price Report</h2>',
   
-  # ── Monthly averages table ──
-  "<h3>Monthly Averages</h3>",
-  monthly_avg_fmt %>%
-    kable("html", digits = 1, format.args = list(big.mark = ",")) %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                  full_width = TRUE, font_size = 14) %>%
-    as.character(),
+# ── Monthly averages table ──
+"<h3>Monthly Averages</h3>",
+monthly_avg_fmt %>%
+  kable("html", digits = 1, format.args = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14) %>%
+  row_spec(bold_rows, bold = TRUE) %>%
+  as.character(),
+
+# ── MoM growth table ──
+"<h3>Month-on-Month Growth</h3>",
+mom_growth_fmt %>%
+  kable("html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14) %>%
+  row_spec(bold_rows[bold_rows <= nrow(mom_growth_fmt)], bold = TRUE) %>%
+  as.character(),
   
-  # ── MoM growth table ──
-  "<h3>Month-on-Month Growth</h3>",
-  mom_growth_fmt %>%
-    kable("html") %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                  full_width = TRUE, font_size = 14) %>%
-    as.character(),
-  
-  # ── Australia line chart ──
-  "<h3>Australia — Daily Fuel Prices</h3>",
-  gg_to_img(plot_city_line("Australia")),
+# ── Australia line chart ──
+"<h3>Australia — Daily Fuel Prices</h3>",
+gg_to_img(plot_city_line("Australia")),
+
+# ── Daily detail table ──
+"<h3>Daily Prices — Last Actual Month & First Estimate Month</h3>",
+daily_detail %>%
+  kable("html", digits = 1) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = TRUE, font_size = 14) %>%
+  as.character(),
   
   # ── Regression chart ──
   "<h3>Australia MoM vs ABS Automotive Fuel Index</h3>",
