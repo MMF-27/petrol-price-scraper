@@ -311,8 +311,8 @@ html_out <- paste0(
   "</body></html>"
 )
 
-# ── Write to output folder ──
-if (!dir.exists("output")) dir.create("output", recursive = TRUE)
-out_path <- "output/fuel_report.html"
+# ── Write to docs folder (served by GitHub Pages) ──
+if (!dir.exists("docs")) dir.create("docs", recursive = TRUE)
+out_path <- "docs/index.html"
 writeLines(html_out, out_path)
 cat("Report written to:", out_path, "\n")
