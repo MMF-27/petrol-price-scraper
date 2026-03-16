@@ -162,10 +162,9 @@ plot_city_line <- function(city) {
     )
 }
 
-# Usage:
 # plot_city_line("Sydney")
 # plot_city_line("Perth")
-plot_city_line("Australia")
+#plot_city_line("Australia")
 
 
 # ─────────────────────────────────────────────
@@ -178,7 +177,6 @@ auto.aus.data <-raw.3 %>%
   filter(series_id=="A130398320J") %>%
   select(date,value) %>%
   rename(year_month=date)
-
 
 reg.data <- left_join(monthly_avg, auto.aus.data, by = "year_month") %>%
   na.omit() %>%
@@ -228,9 +226,6 @@ print(fuel.data %>% select(forecast_date, date, Actual_estimate, all_of(cities))
 
 cat("\n=== Step 3: Monthly averages ===\n")
 print(monthly_avg)
-
-
-
 
 # ── Helper: render a ggplot to an inline base64 HTML img tag ──
 gg_to_img <- function(p, width = 10, height = 5) {
