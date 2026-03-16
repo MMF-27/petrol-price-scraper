@@ -30,8 +30,8 @@ extract_chart_data <- function(image_path, city_name, target_dots = 45,
   
   # -- Purple mask --
   purple_mask <- (r_chan > 0.15 & r_chan < 0.65) &
-                 (g_chan < 0.25) &
-                 (b_chan > 0.15 & b_chan < 0.65)
+    (g_chan < 0.25) &
+    (b_chan > 0.15 & b_chan < 0.65)
   
   # -- Erosion function --
   erode_mask <- function(mask, radius) {
@@ -161,8 +161,8 @@ extract_chart_data <- function(image_path, city_name, target_dots = 45,
     ld <- which(dark_mask[rr, cc], arr.ind=TRUE)
     if (nrow(ld)>0) label_cols <- c(label_cols, ld[,2])
   }
-  sl <- max(1, min(label_cols)-5)
-  sr <- round(quantile(label_cols, 0.70))
+  sl <- max(1, min(label_cols) + 25)   #Use to align the left crop of y axis
+  sr <- round(quantile(label_cols, 0.61))  # Use to align the right crop of y axis
   
   ocr_eng <- tesseract(options=list(tessedit_char_whitelist="0123456789",
                                     tessedit_pageseg_mode=7))
@@ -216,6 +216,31 @@ extract_chart_data <- function(image_path, city_name, target_dots = 45,
   pts$value <- round(tv + (pts$median_row-tr)/ppu, 1)
   cat("Values:", min(pts$value), "to", max(pts$value), "\n")
   
+  # -- Save overlay check plot --
+  if (!dir.exists("data")) dir.create("data", recursive = TRUE)
+  plot_file <- paste0("data/check_", gsub(" ", "_", tolower(city_name)), "_", today, ".png")
+  png(plot_file, width = 1200, height = 800)
+  
+  plot(1, type = "n",
+       xlim = c(0, ncol(img)), ylim = c(0, nrow(img)), asp = 1,
+       xlab = "x (pixels)", ylab = "y (pixels)",
+       main = paste0(city_name, " — ", today, " — gridlines (red) + dots (green)"))
+  rasterImage(img, 0, 0, ncol(img), nrow(img))
+  
+  for (j in 1:nrow(ac)) {
+    y_plot <- nrow(img) - ac$image_row[j]
+    abline(h = y_plot, col = "red", lty = 2, lwd = 1.5)
+    text(ncol(img) - 50, y_plot + 10,
+         labels = ac$axis_value[j], col = "red", cex = 1, font = 2)
+  }
+  points(pts$median_col, nrow(img) - pts$median_row,
+         col = "green", pch = 1, cex = 2, lwd = 2)
+  text(pts$median_col, nrow(img) - pts$median_row + 15,
+       labels = pts$dot_id, col = "green", cex = 0.6)
+  
+  dev.off()
+  cat("Saved check plot:", plot_file, "\n")
+  
   data.frame(point=pts$dot_id, city=city_name, value=pts$value)
 }
 
@@ -255,9 +280,8 @@ for (i in 1:nrow(cities)) {
 # -- Pivot wide and add dates --
 all_wide <- all_results %>%
   pivot_wider(names_from = city, values_from = value) %>%
-  mutate(forecast_date = today,
-         date = today - days(max(point) - point)) %>%
-  select(forecast_date, date, point, everything())
+  mutate(date = today - days(max(point) - point)) %>%
+  select(date, point, everything())
 
 cat("\nToday's extraction:\n")
 print(all_wide)
@@ -270,15 +294,12 @@ if (!dir.exists("data")) dir.create("data", recursive = TRUE)
 
 if (file.exists(output_file)) {
   # Read existing data, append new rows, remove duplicates
-existing <- read.csv(output_file, stringsAsFactors = FALSE)
-existing$date <- as.Date(existing$date)
-existing$forecast_date <- as.Date(existing$forecast_date)
+  existing <- read.csv(output_file, stringsAsFactors = FALSE)
+  existing$date <- as.Date(existing$date)
   
-combined <- bind_rows(existing, all_wide) %>%
-  group_by(forecast_date, date) %>%
-  slice_tail(n = 1) %>%
-  ungroup() %>%
-  arrange(date)
+  combined <- bind_rows(existing, all_wide) %>%
+    distinct(date, .keep_all = TRUE) %>%     # deduplicate by date
+    arrange(date)
   
   write.csv(combined, output_file, row.names = FALSE)
   cat("\nAppended to", output_file, "- total rows:", nrow(combined), "\n")
