@@ -8,19 +8,13 @@ on:
 jobs:
   extract:
     runs-on: ubuntu-latest
-
+    
     permissions:
       contents: write
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.3.2'
-          use-public-rspm: true
 
       - name: Install system dependencies
         run: |
@@ -33,35 +27,37 @@ jobs:
             libpoppler-cpp-dev \
             libpng-dev \
             libjpeg-dev \
-            libcurl4-openssl-dev
-          # Verify critical headers exist
-          dpkg -l | grep -E 'libjpeg-dev|libpoppler-cpp-dev|libtesseract-dev'
+            libcurl4-openssl-dev \
+            libxml2-dev
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.2'
+          use-public-rspm: true
 
       - name: Install R packages
         run: |
           Rscript -e '
-            install.packages(
-              c("qpdf", "pdftools", "tesseract", "png", "tidyr", "dplyr", "lubridate"),
-              repos = "https://cloud.r-project.org",
-              Ncpus = 2
-            )
-            # Verify all packages load
-            library(png)
-            library(tesseract)
-            library(tidyr)
-            library(dplyr)
-            library(lubridate)
-            cat("All packages loaded successfully\n")
+            cat("Using repos:", getOption("repos"), "\n")
+            install.packages(c(
+              "png", "tesseract", "tidyr", "dplyr", "lubridate",
+              "ggplot2", "readabs", "knitr", "kableExtra",
+              "base64enc", "scales"
+            ))
+            cat("All packages installed\n")
           '
 
-      - name: Run extraction
+      - name: Run scraper
         run: Rscript scripts/extract_petrol_data.R
+
+      - name: Run analysis
+        run: Rscript scripts/fuel_analysis.R
 
       - name: Commit results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/petrol_prices.csv
-          git add data/petrol_prices.csv data/check_*.png
-          git diff --staged --quiet || git commit -m "Update petrol prices $(date +%Y-%m-%d)"
+          git add data/petrol_prices.csv data/check_*.png output/fuel_report.html
+          git diff --staged --quiet || git commit -m "Update petrol prices and report $(date +%Y-%m-%d)"
           git push
