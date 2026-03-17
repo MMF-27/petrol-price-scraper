@@ -306,7 +306,7 @@ mom_growth_fmt %>%
   kable("html") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = TRUE, font_size = 14) %>%
-  row_spec(bold_rows[bold_rows <= nrow(mom_growth_fmt)], bold = TRUE) %>%
+  row_spec(bold_rows[bold_rows <= nrow(mom_growth_fmt)] - 1, bold = TRUE) %>%
   as.character(),
   
 # ── Australia line chart ──
