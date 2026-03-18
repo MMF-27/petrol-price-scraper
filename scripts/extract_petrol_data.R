@@ -288,7 +288,7 @@ for (i in 1:nrow(cities)) {
 all_wide <- all_results %>%
   pivot_wider(names_from = city, values_from = value) %>%
   mutate(forecast_date = today,
-         date = today - days(max(point) - point)) %>%
+         date = today -1 - days(max(point) - point)) %>%
   select(forecast_date, date, point, everything())
 
 cat("\nToday's extraction:\n")
