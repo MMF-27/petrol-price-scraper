@@ -8,7 +8,8 @@ library(tidyr)
 library(dplyr)
 library(lubridate)
 
-today <- Sys.Date()
+Sys.setenv(TZ = "Australia/Sydney")
+today <-  Sys.Date()
 
 # ---- FUNCTION: extract_chart_data ----------------------------
 
