@@ -144,7 +144,7 @@ mom_growth <- monthly_avg %>%
   arrange(year_month) %>%
   mutate(
     across(c(all_of(cities), "Australia"), ~ .x / lag(.x) - 1),
-          MoM_cpi_bps=round(aus_cpi_weight*Australia*10^4,digits=0)
+    MoM_cpi_bps = round(aus_cpi_weight * Australia * 10^4, digits = 0)
   ) %>%
   na.omit()
 
