@@ -15,7 +15,7 @@ scraped.fuel.raw <- read.csv("data/petrol_prices.csv", header = TRUE)
 cities <- c("Sydney", "Melbourne", "Brisbane", "Adelaide", "Perth")
 cpi_weights<-c(0.2974,0.2848,0.1599,0.0753,0.1294) #weights of automotive fuels across Capitals in order
 cpi_weights<-cpi_weights/sum(cpi_weights)
-aus_cpi_weight<- 0.0032 #hardcode for 2025 weighting pattern of automotive fuel
+aus_cpi_weight<- 0.032 #hardcode for 2025 weighting pattern of automotive fuel
 
 # ─────────────────────────────────────────────
 # STEP 1: Keep latest forecast_date per date
