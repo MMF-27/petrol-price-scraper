@@ -262,7 +262,7 @@ gg_to_img <- function(p, width = 10, height = 5) {
 mom_growth_fmt <- mom_growth %>%
   mutate(
     year_month = format(year_month, "%b-%y"),
-    across(c(all_of(cities), "Australia"), ~ scales::percent(.x, accuracy = 0.01)
+    across(c(all_of(cities), "Australia"), ~ scales::percent(.x, accuracy = 0.01))
   )
 
 # ── Format monthly_avg: date as mmm-yy ──
