@@ -28,7 +28,8 @@ fuel.data <- scraped.fuel.raw %>%
   group_by(date) %>%
   slice_max(forecast_date, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
-  arrange(date)
+  arrange(date) %>%
+  select(forecast_date,date,point,Sydney,Melbourne,Brisbane,Adelaide,Perth)
 
 # ─────────────────────────────────────────────
 # STEP 2: Forecast rest of current month
@@ -185,10 +186,58 @@ plot_city_line <- function(city) {
     )
 }
 
-# plot_city_line("Sydney")
-# plot_city_line("Perth")
-#plot_city_line("Australia")
+plot_city_line("Sydney")
+######### Single line chart - clearer without YoY data ###############################
 
+#Reduce the fuel data to only include the next 1m of E's
+fuel.data.reduced <- fuel.data %>%
+  filter(
+    Actual_estimate == "A" |
+      (Actual_estimate == "E" & date <= ceiling_date(max(date[Actual_estimate == "A"]), "month") %m+% months(1) - days(1))
+  )
+  
+
+plot_city_line_2 <- function(city) {
+  
+  cutoff <- max(fuel.data.reduced$date) %m-% months(6)
+  max_date <- max(fuel.data.reduced$date)
+  
+  monthly_dots <- monthly_avg %>%
+    filter(year_month >= ceiling_date(cutoff, "month"),
+           year_month <= floor_date(max_date, "month")) %>%
+    mutate(year_month = year_month + days(14))
+  
+  fuel.data.reduced %>%
+    filter(date >= cutoff) %>%
+    ggplot(aes(x = date, y = .data[[city]])) +
+    geom_line(aes(linetype = Actual_estimate), colour = bstar_colors[1]) +
+    geom_point(
+      data = monthly_dots,
+      aes(x = year_month, y = .data[[city]]),
+      colour = bstar_colors[2], size = 3, shape = 16
+    ) +
+    scale_linetype_manual(values = c("A" = "solid", "E" = "dashed"), guide = "none") +
+    scale_x_date(
+      date_breaks = "1 month",
+      date_labels = "%d-%b-%y"
+    ) +
+    labs(
+      title  = paste(city, "— Daily Fuel Prices"),
+      x      = NULL,
+      y      = "Price (cents per litre)",
+      caption = "B* Fixed Income, ACCC"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      panel.grid.minor  = element_blank(),
+      axis.text.x       = element_text(size = 7, colour = "gray20"),
+      axis.text.y       = element_text(size = 7, colour = "gray20"),
+      legend.text       = element_text(colour = "gray20"),
+      legend.title      = element_text(colour = "gray20")
+    )
+}
+
+#plot_city_line_2("Sydney")
 
 # ─────────────────────────────────────────────
 # Comparing to the fuel index
@@ -205,7 +254,7 @@ reg.data <- left_join(monthly_avg, auto.aus.data, by = "year_month") %>%
   na.omit() %>%
   arrange(year_month) %>%
   mutate( Australia_mom = Australia / lag(Australia) - 1,
-    value_mom     = value / lag(value) - 1
+          value_mom     = value / lag(value) - 1
   ) %>%
   na.omit()  # drop first row where lag is NA
 
@@ -270,11 +319,29 @@ monthly_avg_fmt <- monthly_avg %>%
   mutate(year_month = format(year_month, "%b-%y"))
 
 # ── Find which rows to bold ──
-# Last A row and first E row in monthly_avg
 ae_index <- monthly_avg$Actual_estimate
 last_A_row  <- max(which(ae_index == "A"))
 first_E_row <- min(which(ae_index == "E"))
 bold_rows   <- c(last_A_row, first_E_row)
+
+# ── 1) Daily detail: last 20 actuals + next 7 forecasts ──
+last_A_date <- max(fuel.data$date[fuel.data$Actual_estimate == "A"])
+
+daily_detail_new <- fuel.data %>%
+  filter(
+    (Actual_estimate == "A" & date > last_A_date - days(20)) |
+      (Actual_estimate == "E" & date <= last_A_date + days(7))
+  ) %>%
+  arrange(date) %>%
+  select(date, Actual_estimate, all_of(cities), Australia) %>%
+  mutate(
+    date = format(date, "%d-%b-%y"),
+    across(c(all_of(cities), "Australia"), ~ round(.x, 1))
+  )
+
+# Find the row indices of the last 3 actuals to bold
+n_actuals <- sum(fuel.data$Actual_estimate[fuel.data$date > last_A_date - days(20) & fuel.data$date <= last_A_date] == "A")
+bold_daily_rows <- (n_actuals - 2):n_actuals
 
 # ── Build HTML ──
 html_out <- paste0(
@@ -293,35 +360,36 @@ html_out <- paste0(
 <body>
 <h2>Fuel Price Report</h2>',
   
-# ── Monthly averages table ──
-"<h3>Monthly Averages</h3>",
-monthly_avg_fmt %>%
-  kable("html", digits = 1, format.args = list(big.mark = ",")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                full_width = TRUE, font_size = 14) %>%
-  row_spec(bold_rows, bold = TRUE) %>%
-  as.character(),
-
-# ── MoM growth table ──
-"<h3>Month-on-Month Growth</h3>",
-mom_growth_fmt %>%
-  kable("html") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                full_width = TRUE, font_size = 14) %>%
-  row_spec(bold_rows[bold_rows <= nrow(mom_growth_fmt)] - 1, bold = TRUE) %>%
-  as.character(),
+  # ── 1) Daily detail table FIRST ──
+  "<h3>Daily Prices — Last 20 Actuals & Next 7 Forecast Days</h3>",
+  daily_detail_new %>%
+    kable("html", digits = 1) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = TRUE, font_size = 14) %>%
+    row_spec(bold_daily_rows, bold = TRUE) %>%
+    as.character(),
   
-# ── Australia line chart ──
-"<h3>Australia — Daily Fuel Prices</h3>",
-gg_to_img(plot_city_line("Australia")),
-
-# ── Daily detail table ──
-"<h3>Daily Prices — Last Actual Month & First Estimate Month</h3>",
-daily_detail %>%
-  kable("html", digits = 1) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                full_width = TRUE, font_size = 14) %>%
-  as.character(),
+  # ── 2) Monthly averages table ──
+  "<h3>Monthly Averages</h3>",
+  monthly_avg_fmt %>%
+    kable("html", digits = 1, format.args = list(big.mark = ",")) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = TRUE, font_size = 14) %>%
+    row_spec(bold_rows, bold = TRUE) %>%
+    as.character(),
+  
+  # ── 2) Australia line chart (plot_city_line_2) between monthly avg and MoM ──
+  "<h3>Australia — Daily Fuel Prices</h3>",
+  gg_to_img(plot_city_line_2("Australia")),
+  
+  # ── 2) MoM growth table ──
+  "<h3>Month-on-Month Growth</h3>",
+  mom_growth_fmt %>%
+    kable("html") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = TRUE, font_size = 14) %>%
+    row_spec(bold_rows[bold_rows <= nrow(mom_growth_fmt)] - 1, bold = TRUE) %>%
+    as.character(),
   
   # ── Regression chart ──
   "<h3>Australia MoM vs ABS Automotive Fuel Index</h3>",
@@ -337,8 +405,16 @@ daily_detail %>%
             axis.text.y = element_text(size = 7, colour = "gray20"))
   ),
   
-  # ── Per-city line charts ──
-  "<h3>Capital City Daily Fuel Prices</h3>",
+  # ── 3) City-specific charts: plot_city_line_2 (short-range) ──
+  "<h3>Capital City Daily Fuel Prices — Recent</h3>",
+  paste(sapply(cities, function(city) {
+    paste0("<h4>", city, "</h4>", gg_to_img(plot_city_line_2(city)))
+  }), collapse = "\n"),
+  
+  # ── 3) All cities + Australia: plot_city_line (YoY overlay) ──
+  "<h3>Capital City Daily Fuel Prices — Year-on-Year</h3>",
+  "<h4>Australia</h4>",
+  gg_to_img(plot_city_line("Australia")),
   paste(sapply(cities, function(city) {
     paste0("<h4>", city, "</h4>", gg_to_img(plot_city_line(city)))
   }), collapse = "\n"),
