@@ -31,6 +31,36 @@ fuel.data <- scraped.fuel.raw %>%
   arrange(date) %>%
   select(forecast_date,date,point,Sydney,Melbourne,Brisbane,Adelaide,Perth)
 
+### This section maks the fuel data be based of the median to stop data errors ####
+# Compute median per date per city (across all forecast_dates)
+city_medians <- scraped.fuel.raw %>%
+  mutate(date = as.Date(date)) %>%
+  group_by(date) %>%
+  summarise(across(all_of(cities), ~ median(.x, na.rm = TRUE)), .groups = "drop")
+
+# Keep latest forecast_date per date
+fuel.data <- scraped.fuel.raw %>%
+  mutate(
+    date          = as.Date(date),
+    forecast_date = as.Date(forecast_date)
+  ) %>%
+  group_by(date) %>%
+  slice_max(forecast_date, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(date) %>%
+  select(forecast_date, date, point, all_of(cities)) %>%
+  # Join medians and swap in where date is > 1 month old
+  left_join(city_medians, by = "date", suffix = c("", "_med")) %>%
+  mutate(
+    across(
+      all_of(cities),
+      ~ if_else(date < Sys.Date() %m-% months(1), get(paste0(cur_column(), "_med")), .x)
+    )
+  ) %>%
+  select(forecast_date, date, point, all_of(cities))
+######
+
+
 # ─────────────────────────────────────────────
 # STEP 2: Forecast rest of current month
 # ─────────────────────────────────────────────
