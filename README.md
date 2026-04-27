@@ -1,4 +1,4 @@
-# Petrol Price Scraper
+# Taylor Tour Tracker
 
 Extracts and stores data from the ACCC Fuelwatch charts at https://www.accc.gov.au/consumers/petrol-and-fuel/petrol-price-cycles-in-the-5-largest-cities.
 
