@@ -16,25 +16,25 @@ cities <- c("Sydney", "Melbourne", "Brisbane", "Adelaide", "Perth")
 cpi_weights<-c(0.2974,0.2848,0.1599,0.0753,0.1294) #weights of automotive fuels across Capitals in order
 cpi_weights<-cpi_weights/sum(cpi_weights)
 aus_cpi_weight<- 0.032 #hardcode for 2025 weighting pattern of automotive fuel
+#excludes dates which the ACCC site was down
+excluded_dates <- seq.Date(
+  from = as.Date("2026-04-20"),
+  to   = as.Date("2026-05-16"),
+  by   = "day"
+)
 
 # ─────────────────────────────────────────────
 # STEP 1: Keep latest forecast_date per date
 # ─────────────────────────────────────────────
-fuel.data <- scraped.fuel.raw %>%
-  mutate(
-    date          = as.Date(date),
-    forecast_date = as.Date(forecast_date)
-  ) %>%
-  group_by(date) %>%
-  slice_max(forecast_date, n = 1, with_ties = FALSE) %>%
-  ungroup() %>%
-  arrange(date) %>%
-  select(forecast_date,date,point,Sydney,Melbourne,Brisbane,Adelaide,Perth)
 
 ### This section maks the fuel data be based of the median to stop data errors ####
 # Compute median per date per city (across all forecast_dates)
 city_medians <- scraped.fuel.raw %>%
-  mutate(date = as.Date(date)) %>%
+mutate(
+    date          = as.Date(date),
+    forecast_date = as.Date(forecast_date)
+  ) %>%
+filter(!forecast_date %in% excluded_dates) %>% #
   group_by(date) %>%
   summarise(across(all_of(cities), ~ median(.x, na.rm = TRUE)), .groups = "drop")
 
@@ -47,6 +47,7 @@ fuel.data <- scraped.fuel.raw %>%
   group_by(date) %>%
   slice_max(forecast_date, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
+ filter(!forecast_date %in% excluded_dates) %>%
   arrange(date) %>%
   select(forecast_date, date, point, all_of(cities)) %>%
   # Join medians and swap in where date is > 1 month old
