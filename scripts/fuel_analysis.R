@@ -380,7 +380,7 @@ html_out <- paste0(
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Fuel Price Report</title>
+  <title>TayTay tour Report</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 1100px; margin: 40px auto; color: #333F48; }
     h2   { color: #337179; border-bottom: 2px solid #DE8C59; padding-bottom: 6px; }
