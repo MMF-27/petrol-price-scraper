@@ -45,9 +45,9 @@ fuel.data <- scraped.fuel.raw %>%
     forecast_date = as.Date(forecast_date)
   ) %>%
   group_by(date) %>%
+  filter(!forecast_date %in% excluded_dates) %>%
   slice_max(forecast_date, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
- filter(!forecast_date %in% excluded_dates) %>%
   arrange(date) %>%
   select(forecast_date, date, point, all_of(cities)) %>%
   # Join medians and swap in where date is > 1 month old
