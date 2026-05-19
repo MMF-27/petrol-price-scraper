@@ -272,7 +272,7 @@ all_results <- data.frame()
 for (i in 1:nrow(cities)) {
   img_url  <- paste0(base_url, cities$file[i])
   tmp_path <- tempfile(fileext = ".png")
-  
+  Sys.sleep(10)
   tryCatch({
     download.file(img_url, destfile = tmp_path, mode = "wb", quiet = TRUE)
     cat("Downloaded:", cities$city[i], "\n")
